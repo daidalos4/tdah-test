@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+    <title>ASRS v1.1 - ADHD/TDAH Screening</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round&display=block" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'DM Sans', sans-serif; background-color: #f1f5f9; color: #1e293b; transition: all 0.3s ease; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+        
+        .fade-in { animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .slide-in { animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { transform: translateX(10px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .progress-bar { transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .lang-btn { opacity: 0.6; transition: all 0.2s; font-weight: bold; font-size: 0.85rem; padding: 4px; }
+        .lang-btn.active { opacity: 1; color: #4f46e5; text-decoration: underline; text-underline-offset: 4px; }
+        .lang-btn:hover { opacity: 1; }
+
+        @media print {
+            header, footer, button, .no-print { display: none !important; }
+            #app { padding: 0; margin: 0; width: 100%; max-width: 100%; box-shadow: none; border: none; }
+            body { background: white; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <header class="bg-white/90 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200 shadow-sm">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-2 cursor-pointer" onclick="location.reload()">
+                <div class="bg-indigo-600 text-white p-1 rounded-md flex items-center justify-center">
+                    <span class="material-icons-round text-lg">psychology</span>
+                </div>
+                <span class="font-bold text-slate-800 tracking-tight text-sm sm:text-base" id="header-title">TDAH Dépistage</span>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="setLanguage('fr')" class="lang-btn active" id="btn-fr">FR</button>
+                <span class="text-slate-300">|</span>
+                <button onclick="setLanguage('en')" class="lang-btn" id="btn-en">EN</button>
+                <span class="text-slate-300">|</span>
+                <button onclick="setLanguage('it')" class="lang-btn" id="btn-it">IT</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col items-center justify-center p-4 w-full" id="app">
+        </main>
+
+    <footer class="py-8 text-center text-slate-400 text-xs px-4">
+        <p id="footer-data">Ce site ne collecte aucune donnée personnelle.</p>
+        <p class="mt-1" id="footer-disclaimer">Basé sur l'échelle officielle ASRS v1.1 de l'OMS.</p>
+    </footer>
+
+    <script>
+        let currentLang = 'fr'; 
+
+        // --- TRADUCTIONS ---
+        const t = {
+            fr: {
+                headerTitle: "TDAH Dépistage",
+                introTitle: "Auto-évaluation TDAH",
+                introSubtitle: "L'ASRS v1.1 est l'outil de référence de l'OMS pour repérer les symptômes du TDAH chez l'adulte.",
+                tagline: "Pour adultes • Contexte France",
+                
+                warningTitle: "Attention : Ce n'est pas un diagnostic",
+                warningText: "Ce questionnaire est un outil de <strong>dépistage</strong>. Seul un médecin peut poser un diagnostic officiel.",
+                
+                benefit1Title: "Standardisé",
+                benefit1Desc: "OMS (18 questions)",
+                benefit2Title: "Anonyme",
+                benefit2Desc: "Aucune donnée envoyée",
+                benefit3Title: "Rapide",
+                benefit3Desc: "Moins de 5 minutes",
+                
+                btnStart: "Commencer le test",
+                partA: "Dépistage (Partie A)",
+                partB: "Symptômes (Partie B)",
+                question: "Question",
+                btnBack: "Retour",
+                btnNext: "Suivant",
+                btnResults: "Voir les résultats",
+                btnRefaire: "Refaire le test",
+                btnPrint: "Imprimer / PDF",
+                footerData: "Ce site ne collecte aucune donnée personnelle.",
+                footerDisclaimer: "Source : Organisation Mondiale de la Santé (OMS) - ASRS v1.1",
+                
+                resultPosTitle: "Résultat : Dépistage positif",
+                resultNegTitle: "Résultat : Dépistage négatif",
+                resultPosText: "Votre score à la Partie A est de <strong>{score}/6</strong>. Selon l'OMS, un score de 4 ou plus indique une forte probabilité de TDAH adulte et justifie une consultation médicale.",
+                resultNegText: "Votre score à la Partie A est de <strong>{score}/6</strong>. Ce résultat suggère que vos symptômes ne sont probablement pas liés à un TDAH clinique.",
+                
+                showFrContent: true,
+                frSectionTitle: "Parcours de soin en France",
+                frStep1: "1. Le médecin généraliste",
+                frStep1Desc: "Passage obligé pour obtenir une <strong>lettre d'adressage</strong> (remboursement sécu).",
+                frStep2: "2. Le spécialiste (psychiatre)",
+                frStep2Desc: "Seul habilité à poser le diagnostic et prescrire le traitement initial.",
+                frStep3: "3. Le traitement",
+                frStep3Desc: "Prescription sur ordonnance sécurisée (28 jours max).",
+                frComorbidities: "Points de vigilance",
+                frComorbiditiesDesc: "Le TDAH est souvent masqué par d'autres troubles :",
+                frBtnMeds: "Voir les traitements autorisés en France",
+                
+                genericAdvice: "Nous vous recommandons d'imprimer ces résultats et de les partager avec un professionnel de santé pour une évaluation approfondie."
+            },
+            en: {
+                headerTitle: "ADHD Screener",
+                introTitle: "ADHD Self-Report",
+                introSubtitle: "The ASRS v1.1 is the WHO recognized instrument for identifying ADHD symptoms in adults.",
+                tagline: "For Adults • WHO Standard",
+                
+                warningTitle: "Important: Not a diagnosis",
+                warningText: "This is a <strong>screening tool</strong>. Only a qualified doctor can provide a formal medical diagnosis.",
+                
+                benefit1Title: "Standardized",
+                benefit1Desc: "WHO (18 questions)",
+                benefit2Title: "Anonymous",
+                benefit2Desc: "No data stored",
+                benefit3Title: "Fast",
+                benefit3Desc: "Less than 5 minutes",
+                
+                btnStart: "Start Screening",
+                partA: "Screening (Part A)",
+                partB: "Symptoms (Part B)",
+                question: "Question",
+                btnBack: "Back",
+                btnNext: "Next",
+                btnResults: "See Results",
+                btnRefaire: "Restart",
+                btnPrint: "Print / PDF",
+                footerData: "This site does not collect personal data.",
+                footerDisclaimer: "Source: World Health Organization (WHO) - ASRS v1.1",
+                
+                resultPosTitle: "Result: Screening Positive",
+                resultNegTitle: "Result: Screening Negative",
+                resultPosText: "Your Part A score is <strong>{score}/6</strong>. According to the WHO, a score of 4 or higher indicates symptoms highly consistent with adult ADHD.",
+                resultNegText: "Your Part A score is <strong>{score}/6</strong>. This suggests your symptoms are unlikely to be consistent with clinical ADHD.",
+                
+                showFrContent: false,
+                genericAdvice: "We strictly recommend sharing these results with a doctor or mental health professional for a comprehensive clinical evaluation."
+            },
+            it: {
+                headerTitle: "Screening ADHD",
+                introTitle: "Autovalutazione ADHD",
+                introSubtitle: "L'ASRS v1.1 è lo strumento riconosciuto dall'OMS per identificare i sintomi dell'ADHD negli adulti.",
+                tagline: "Per Adulti • Standard OMS",
+                
+                warningTitle: "Importante: Non è una diagnosi",
+                warningText: "Questo è uno strumento di <strong>screening</strong>. Solo un medico può fornire una diagnosi ufficiale.",
+                
+                benefit1Title: "Standardizzato",
+                benefit1Desc: "OMS (18 domande)",
+                benefit2Title: "Anonimo",
+                benefit2Desc: "Nessun dato salvato",
+                benefit3Title: "Rapido",
+                benefit3Desc: "Meno di 5 minuti",
+                
+                btnStart: "Inizia il test",
+                partA: "Screening (Parte A)",
+                partB: "Sintomi (Parte B)",
+                question: "Domanda",
+                btnBack: "Indietro",
+                btnNext: "Avanti",
+                btnResults: "Vedi risultati",
+                btnRefaire: "Ricomincia",
+                btnPrint: "Stampa / PDF",
+                footerData: "Questo sito non raccoglie dati personali.",
+                footerDisclaimer: "Fonte: Organizzazione Mondiale della Sanità (OMS) - ASRS v1.1",
+                
+                resultPosTitle: "Risultato: Screening positivo",
+                resultNegTitle: "Risultato: Screening negativo",
+                resultPosText: "Il tuo punteggio nella Parte A è <strong>{score}/6</strong>. Secondo l'OMS, un punteggio di 4 o più indica un'alta probabilità di ADHD adulto.",
+                resultNegText: "Il tuo punteggio nella Parte A è <strong>{score}/6</strong>. Questo suggerisce che i tuoi sintomi probabilmente non sono legati all'ADHD clinico.",
+                
+                showFrContent: false,
+                genericAdvice: "Si consiglia vivamente di condividere questi risultati con un medico o uno specialista per una valutazione clinica approfondita."
+            }
+        };
+
+        const questionsData = [
+            { id: 1, part: 'A', threshold: 2, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il d’avoir des difficultés à finaliser les derniers détails d’un projet une fois que les parties les plus stimulantes ont été faites ?",
+                  en: "How often do you have trouble wrapping up the final details of a project, once the challenging parts have been done?",
+                  it: "Quanto spesso hai difficoltà a concludere i dettagli finali di un progetto, una volta completate le parti più impegnative?"
+              } 
+            },
+            { id: 2, part: 'A', threshold: 2, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il d’avoir des difficultés à mettre les choses en ordre lorsque vous devez faire quelque chose qui demande de l’organisation ?",
+                  en: "How often do you have difficulty getting things in order when you have to do a task that requires organization?",
+                  it: "Quanto spesso hai difficoltà a mettere in ordine le cose quando devi svolgere un compito che richiede organizzazione?"
+              } 
+            },
+            { id: 3, part: 'A', threshold: 2, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il d’avoir des difficultés à vous rappeler vos rendez-vous ou vos obligations ?",
+                  en: "How often do you have problems remembering appointments or obligations?",
+                  it: "Quanto spesso hai problemi a ricordare appuntamenti o obblighi?"
+              } 
+            },
+            { id: 4, part: 'A', threshold: 3, 
+              text: { 
+                  fr: "Quand vous devez faire quelque chose qui demande beaucoup de réflexion, à quelle fréquence vous arrive-t-il d’éviter de le faire ou de le remettre à plus tard ?",
+                  en: "When you have a task that requires a lot of thought, how often do you avoid or delay getting started?",
+                  it: "Quando hai un compito che richiede molta riflessione, quanto spesso eviti o rimandi l'inizio?"
+              } 
+            },
+            { id: 5, part: 'A', threshold: 3, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il de remuer ou de tortiller les mains ou les pieds lorsque vous devez rester assis pendant une période prolongée ?",
+                  en: "How often do you fidget or squirm with your hands or feet when you have to sit down for a long time?",
+                  it: "Quanto spesso ti agiti o dimeni mani o piedi quando devi stare seduto per molto tempo?"
+              } 
+            },
+            { id: 6, part: 'A', threshold: 3, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il de vous sentir excessivement actif et contraint de faire quelque chose, comme si vous étiez entraîné malgré vous par un moteur ?",
+                  en: "How often do you feel overly active and compelled to do things, like you were driven by a motor?",
+                  it: "Quanto spesso ti senti eccessivamente attivo e costretto a fare cose, come se fossi spinto da un motore?"
+              } 
+            },
+            { id: 7, part: 'B', threshold: 3, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il de faire des fautes d’étourderie lorsque vous travaillez à un projet ennuyeux ou difficile ?",
+                  en: "How often do you make careless mistakes when you have to work on a boring or difficult project?",
+                  it: "Quanto spesso fai errori di distrazione quando devi lavorare su un progetto noioso o difficile?"
+              } 
+            },
+            { id: 8, part: 'B', threshold: 3, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il d’avoir des difficultés à vous concentrer lorsque vous faites un travail ennuyeux ou répétitif ?",
+                  en: "How often do you have difficulty keeping your attention when you are doing boring or repetitive work?",
+                  it: "Quanto spesso hai difficoltà a mantenere l'attenzione quando svolgi un lavoro noioso o ripetitivo?"
+              } 
+            },
+            { id: 9, part: 'B', threshold: 2, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il d’avoir des difficultés à vous concentrer sur les propos de votre interlocuteur, même s’il s’adresse directement à vous ?",
+                  en: "How often do you have difficulty concentrating on what people say to you, even when they are speaking to you directly?",
+                  it: "Quanto spesso hai difficoltà a concentrarti su ciò che ti dicono le persone, anche quando ti parlano direttamente?"
+              } 
+            },
+            { id: 10, part: 'B', threshold: 3, 
+              text: { 
+                  fr: "À la maison ou au travail, à quelle fréquence vous arrive-t-il d’égarer des choses ou d’avoir des difficultés à les retrouver ?",
+                  en: "How often do you misplace or have difficulty finding things at home or at work?",
+                  it: "Quanto spesso perdi o hai difficoltà a trovare cose a casa o al lavoro?"
+              } 
+            },
+            { id: 11, part: 'B', threshold: 3, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il d’être distrait par l’activité ou par le bruit autour de vous ?",
+                  en: "How often are you distracted by activity or noise around you?",
+                  it: "Quanto spesso vieni distratto dall'attività o dal rumore intorno a te?"
+              } 
+            },
+            { id: 12, part: 'B', threshold: 2, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il de quitter votre siège pendant des réunions ou d’autres situations où vous devriez rester assis ?",
+                  en: "How often do you leave your seat in meetings or other situations in which you are expected to remain seated?",
+                  it: "Quanto spesso lasci il tuo posto durante riunioni o altre situazioni in cui dovresti rimanere seduto?"
+              } 
+            },
+            { id: 13, part: 'B', threshold: 3, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il d’avoir des difficultés à vous tenir tranquille ?",
+                  en: "How often do you have difficulty feeling restless or fidgety?",
+                  it: "Quanto spesso hai difficoltà a stare tranquillo?"
+              } 
+            },
+            { id: 14, part: 'B', threshold: 3, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il d’avoir des difficultés à vous détendre et à vous reposer dans vos temps libres ?",
+                  en: "How often do you have difficulty unwinding and relaxing when you have time to yourself?",
+                  it: "Quanto spesso hai difficoltà a rilassarti e riposarti nel tempo libero?"
+              } 
+            },
+            { id: 15, part: 'B', threshold: 3, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il de parler de façon excessive à l’occasion de rencontres sociales ?",
+                  en: "How often do you find yourself talking too much when you are in social situations?",
+                  it: "Quanto spesso ti ritrovi a parlare troppo in situazioni sociali?"
+              } 
+            },
+            { id: 16, part: 'B', threshold: 2, 
+              text: { 
+                  fr: "Pendant une conversation, à quelle fréquence vous arrive-t-il de terminer les phrases de vos interlocuteurs avant que ces derniers aient le temps de les finir ?",
+                  en: "When you’re in a conversation, how often do you finish the sentences of the people you are talking to, before they can finish them themselves?",
+                  it: "Durante una conversazione, quanto spesso finisci le frasi degli altri prima che possano finirle loro stessi?"
+              } 
+            },
+            { id: 17, part: 'B', threshold: 3, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il d’avoir des difficultés à attendre votre tour lorsque vous devriez le faire ?",
+                  en: "How often do you have difficulty waiting your turn in situations when turn taking is required?",
+                  it: "Quanto spesso hai difficoltà ad aspettare il tuo turno quando dovresti farlo?"
+              } 
+            },
+            { id: 18, part: 'B', threshold: 2, 
+              text: { 
+                  fr: "À quelle fréquence vous arrive-t-il d’interrompre les gens lorsqu’ils sont occupés ?",
+                  en: "How often do you interrupt others when they are busy?",
+                  it: "Quanto spesso interrompi gli altri quando sono occupati?"
+              } 
+            }
+        ];
+
+        const optionsData = [
+            { value: 0, label: { fr: "Jamais", en: "Never", it: "Mai" } },
+            { value: 1, label: { fr: "Rarement", en: "Rarely", it: "Raramente" } },
+            { value: 2, label: { fr: "Parfois", en: "Sometimes", it: "A volte" } },
+            { value: 3, label: { fr: "Souvent", en: "Often", it: "Spesso" } },
+            { value: 4, label: { fr: "Très souvent", en: "Very often", it: "Molto spesso" } }
+        ];
+
+        let currentStep = 'intro';
+        let currentQuestionIndex = 0;
+        let userAnswers = new Array(questionsData.length).fill(null);
+        let isTransitioning = false; 
+        const app = document.getElementById('app');
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${lang}`).classList.add('active');
+            document.getElementById('header-title').innerText = t[currentLang].headerTitle;
+            document.getElementById('footer-data').innerText = t[currentLang].footerData;
+            document.getElementById('footer-disclaimer').innerText = t[currentLang].footerDisclaimer;
+            render();
+        }
+
+        function render() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (currentStep === 'intro') renderIntro();
+            else if (currentStep === 'quiz') renderQuiz();
+            else if (currentStep === 'results') renderResults();
+        }
+
+        // --- VUE 1 : INTRO (DESIGN VIOLET "OFFICIEL") ---
+        function renderIntro() {
+            const txt = t[currentLang];
+            
+            app.innerHTML = `
+                <div class="w-full max-w-2xl bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden fade-in border border-slate-100 mx-auto mt-4 sm:mt-10">
+                    <div class="bg-indigo-600 p-8 sm:p-12 text-center text-white relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-indigo-600 to-violet-700"></div>
+                        <div class="relative z-10">
+                             <div class="inline-flex p-3 rounded-full bg-white/20 mb-4 backdrop-blur-sm">
+                                <span class="material-icons-round text-4xl">assignment_ind</span>
+                             </div>
+                             <h2 class="text-3xl sm:text-4xl font-bold mb-2 tracking-tight">${txt.introTitle}</h2>
+                             <p class="text-indigo-100 font-medium opacity-90">${txt.tagline}</p>
+                        </div>
+                    </div>
+
+                    <div class="p-6 sm:p-10">
+                        <div class="prose prose-slate max-w-none text-slate-600 mb-8 text-center sm:text-left">
+                            <p class="text-lg leading-relaxed">
+                                ${txt.introSubtitle}
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                             <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="material-icons-round text-indigo-500">fact_check</span>
+                                    <span class="font-bold text-slate-700 text-sm">${txt.benefit1Title}</span>
+                                </div>
+                                <p class="text-xs text-slate-500">${txt.benefit1Desc}</p>
+                             </div>
+                             <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="material-icons-round text-emerald-500">security</span>
+                                    <span class="font-bold text-slate-700 text-sm">${txt.benefit2Title}</span>
+                                </div>
+                                <p class="text-xs text-slate-500">${txt.benefit2Desc}</p>
+                             </div>
+                             <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="material-icons-round text-blue-500">bolt</span>
+                                    <span class="font-bold text-slate-700 text-sm">${txt.benefit3Title}</span>
+                                </div>
+                                <p class="text-xs text-slate-500">${txt.benefit3Desc}</p>
+                             </div>
+                        </div>
+
+                        <div class="bg-amber-50 text-amber-900 px-4 py-4 rounded-xl text-sm border border-amber-100 flex gap-3 items-start mb-8">
+                            <span class="material-icons-round text-amber-600 mt-0.5 flex-shrink-0">warning</span>
+                            <div>
+                                <strong class="block font-bold mb-1">${txt.warningTitle}</strong>
+                                ${txt.warningText}
+                            </div>
+                        </div>
+
+                        <button onclick="startQuiz()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg rounded-xl transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transform active:scale-[0.98]">
+                            ${txt.btnStart}
+                            <span class="material-icons-round">arrow_forward</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- VUE 2 : QUIZ ---
+        function renderQuiz() {
+            isTransitioning = false;
+            const txt = t[currentLang];
+            const q = questionsData[currentQuestionIndex];
+            const progress = ((currentQuestionIndex) / questionsData.length) * 100;
+            const currentAns = userAnswers[currentQuestionIndex];
+            const isPartA = q.part === 'A';
+            const hasAnswer = currentAns !== null; 
+
+            const optionsHtml = optionsData.map(opt => {
+                const isSelected = currentAns === opt.value;
+                return `
+                    <button onclick="selectAnswer(${opt.value})" 
+                        class="w-full p-4 mb-3 text-left border-2 rounded-2xl transition-all duration-200 flex items-center justify-between group 
+                        ${isSelected 
+                            ? 'border-indigo-600 bg-indigo-50/50 shadow-sm' 
+                            : 'border-slate-100 hover:border-indigo-200 hover:bg-white'}">
+                        <span class="text-lg font-medium ${isSelected ? 'text-indigo-800' : 'text-slate-600'}">${opt.label[currentLang]}</span>
+                        <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors 
+                            ${isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 group-hover:border-indigo-300'}">
+                            ${isSelected ? '<span class="material-icons-round text-white text-sm">check</span>' : ''}
+                        </div>
+                    </button>
+                `;
+            }).join('');
+
+            app.innerHTML = `
+                <div class="w-full max-w-2xl bg-white rounded-3xl shadow-xl shadow-slate-200/40 overflow-hidden fade-in flex flex-col min-h-[500px] border border-white ring-1 ring-slate-100 relative">
+                    <div class="h-1.5 w-full bg-slate-50">
+                        <div class="h-full bg-indigo-600 progress-bar" style="width: ${progress}%"></div>
+                    </div>
+                    <div class="p-5 sm:p-10 flex-grow flex flex-col slide-in">
+                        <div class="flex justify-between items-center mb-6">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">${txt.question} ${currentQuestionIndex + 1} / ${questionsData.length}</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-bold 
+                                ${isPartA ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-600'}">
+                                ${isPartA ? txt.partA : txt.partB}
+                            </span>
+                        </div>
+                        <h3 class="text-lg sm:text-2xl font-bold text-slate-800 mb-8 leading-snug">
+                            ${q.text[currentLang]}
+                        </h3>
+                        <div class="mt-auto space-y-2">
+                            ${optionsHtml}
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center z-10">
+                        <button onclick="prevQuestion()" 
+                            class="text-slate-500 hover:text-slate-800 font-medium flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-200/50 transition-colors 
+                            ${currentQuestionIndex === 0 ? 'invisible' : ''}">
+                            <span class="material-icons-round text-lg">arrow_back</span> ${txt.btnBack}
+                        </button>
+                        <button id="next-btn" onclick="nextQuestion()" ${hasAnswer ? '' : 'disabled'}
+                            class="px-6 py-2.5 bg-slate-800 hover:bg-indigo-600 disabled:opacity-20 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-md transition-all flex items-center gap-2 transform active:scale-95">
+                            ${currentQuestionIndex === questionsData.length - 1 ? txt.btnResults : txt.btnNext}
+                            <span class="material-icons-round text-lg">arrow_forward</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderResults() {
+            const txt = t[currentLang];
+            let partAScore = 0;
+            
+            questionsData.forEach((q, idx) => {
+                if (userAnswers[idx] !== null && userAnswers[idx] >= q.threshold && q.part === 'A') partAScore++;
+            });
+
+            const generateDetailList = (part) => {
+                return questionsData
+                    .map((q, idx) => ({ ...q, answer: userAnswers[idx], index: idx }))
+                    .filter(q => q.part === part)
+                    .map(q => {
+                        const answerObj = optionsData.find(o => o.value === q.answer);
+                        const answerLabel = answerObj ? answerObj.label[currentLang] : '-';
+                        return `
+                        <div class="border-b border-slate-100 py-3 last:border-0 flex justify-between items-start gap-4">
+                            <div class="text-sm text-slate-600 w-3/4">
+                                <span class="font-bold text-slate-400 mr-2">${q.index + 1}.</span> ${q.text[currentLang]}
+                            </div>
+                            <div class="text-sm font-bold text-indigo-700 w-1/4 text-right whitespace-nowrap">
+                                ${answerLabel}
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+            };
+
+            const isPositive = partAScore >= 4;
+            const resultTitle = isPositive ? txt.resultPosTitle : txt.resultNegTitle;
+            const resultText = isPositive 
+                ? txt.resultPosText.replace('{score}', partAScore) 
+                : txt.resultNegText.replace('{score}', partAScore);
+            const headerClass = isPositive ? "bg-rose-500" : "bg-emerald-500";
+            const icon = isPositive ? "priority_high" : "check";
+
+            let additionalContent = '';
+
+            if (txt.showFrContent) {
+                additionalContent = `
+                <div class="mt-10 animate-fade-in-up">
+                    <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                        <span class="material-icons-round text-indigo-600">map</span>
+                        ${txt.frSectionTitle}
+                    </h3>
+                    <div class="relative pl-8 space-y-8 before:content-[''] before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-indigo-100">
+                        <div class="relative">
+                            <span class="absolute -left-[34px] w-8 h-8 rounded-full bg-white border-2 border-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm shadow-sm z-10">1</span>
+                            <h4 class="font-bold text-slate-800">${txt.frStep1}</h4>
+                            <p class="text-sm text-slate-600 mt-1">${txt.frStep1Desc}</p>
+                        </div>
+                        <div class="relative">
+                            <span class="absolute -left-[34px] w-8 h-8 rounded-full bg-white border-2 border-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm shadow-sm z-10">2</span>
+                            <h4 class="font-bold text-slate-800">${txt.frStep2}</h4>
+                            <p class="text-sm text-slate-600 mt-1">${txt.frStep2Desc}</p>
+                        </div>
+                        <div class="relative">
+                            <span class="absolute -left-[34px] w-8 h-8 rounded-full bg-white border-2 border-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm shadow-sm z-10">3</span>
+                            <h4 class="font-bold text-slate-800">${txt.frStep3}</h4>
+                            <p class="text-sm text-slate-600 mt-1">${txt.frStep3Desc}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
+                        <span class="material-icons-round text-amber-500 text-lg">warning</span>
+                        ${txt.frComorbidities}
+                    </h4>
+                    <p class="text-sm text-slate-600 mb-4">${txt.frComorbiditiesDesc}</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 shadow-sm">Anxiété / Stress</span>
+                        <span class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 shadow-sm">Sommeil</span>
+                        <span class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 shadow-sm">Émotions</span>
+                        <span class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 shadow-sm">Dyslexie...</span>
+                    </div>
+                </div>
+
+                <div class="mt-8 pt-8 border-t border-slate-100 flex justify-center no-print">
+                    <button onclick="openMedsModal()" class="w-full sm:w-auto px-6 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl font-bold transition-colors flex items-center justify-center gap-2">
+                        <span class="material-icons-round">medication</span>
+                        ${txt.frBtnMeds}
+                    </button>
+                </div>
+                `;
+            } else {
+                additionalContent = `
+                <div class="mt-8 bg-blue-50 p-6 rounded-2xl border border-blue-100 text-center">
+                    <p class="text-blue-800 font-medium">${txt.genericAdvice}</p>
+                </div>
+                `;
+            }
+
+            app.innerHTML = `
+                <div class="w-full max-w-3xl bg-white rounded-3xl shadow-xl shadow-slate-200/40 overflow-hidden fade-in mb-12 border border-white ring-1 ring-slate-100">
+                    <div class="${headerClass} p-8 sm:p-10 text-center text-white relative overflow-hidden">
+                        <div class="absolute inset-0 bg-black/10"></div>
+                        <div class="relative z-10">
+                            <span class="material-icons-round text-6xl bg-white/20 p-4 rounded-full mb-4 backdrop-blur-sm shadow-inner">${icon}</span>
+                            <h2 class="text-3xl font-bold mb-2">${resultTitle}</h2>
+                        </div>
+                    </div>
+                    
+                    <div class="p-5 sm:p-12">
+                        <div class="text-center mb-6">
+                            <p class="text-slate-600 text-lg leading-relaxed">${resultText}</p>
+                        </div>
+
+                        ${additionalContent}
+
+                        <div class="mt-10 bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden">
+                            <div class="bg-slate-100 px-6 py-4 border-b border-slate-200">
+                                <h3 class="font-bold text-slate-700 flex items-center gap-2">
+                                    <span class="material-icons-round text-indigo-500">list_alt</span>
+                                    Detailed Report / Rapport
+                                </h3>
+                            </div>
+                            <div class="p-6">
+                                <div class="mb-6">
+                                    <h4 class="text-xs font-bold text-indigo-500 mb-3 uppercase tracking-widest">${txt.partA}</h4>
+                                    ${generateDetailList('A')}
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-indigo-500 mb-3 uppercase tracking-widest">${txt.partB}</h4>
+                                    ${generateDetailList('B')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-10 flex flex-col sm:flex-row justify-center gap-4 border-t border-slate-100 pt-8 no-print">
+                            <button onclick="window.print()" class="px-6 py-3 bg-white border-2 border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-2">
+                                <span class="material-icons-round">print</span> ${txt.btnPrint}
+                            </button>
+                            <button onclick="restartQuiz()" class="px-6 py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 shadow-lg transition-all flex items-center justify-center gap-2">
+                                <span class="material-icons-round">restart_alt</span> ${txt.btnRefaire}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function startQuiz() { currentStep = 'quiz'; render(); }
+        
+        function selectAnswer(val) { 
+            if (isTransitioning) return;
+            isTransitioning = true;
+            userAnswers[currentQuestionIndex] = val;
+            
+            const buttons = document.querySelectorAll('button[onclick^="selectAnswer"]');
+            buttons.forEach((b, idx) => {
+                 const circle = b.querySelector('div');
+                 if (optionsData[idx].value === val) {
+                     b.classList.remove('border-slate-100', 'hover:border-indigo-200', 'hover:bg-white');
+                     b.classList.add('border-indigo-600', 'bg-indigo-50/50', 'shadow-sm');
+                     b.querySelector('span').classList.remove('text-slate-600');
+                     b.querySelector('span').classList.add('text-indigo-800');
+                     circle.classList.remove('border-slate-300', 'group-hover:border-indigo-300');
+                     circle.classList.add('border-indigo-600', 'bg-indigo-600');
+                     circle.innerHTML = '<span class="material-icons-round text-white text-sm">check</span>';
+                 } else {
+                     b.classList.add('border-slate-100', 'hover:border-indigo-200', 'hover:bg-white');
+                     b.classList.remove('border-indigo-600', 'bg-indigo-50/50', 'shadow-sm');
+                     b.querySelector('span').classList.add('text-slate-600');
+                     b.querySelector('span').classList.remove('text-indigo-800');
+                     circle.classList.add('border-slate-300', 'group-hover:border-indigo-300');
+                     circle.classList.remove('border-indigo-600', 'bg-indigo-600');
+                     circle.innerHTML = '';
+                 }
+            });
+
+            const btn = document.getElementById('next-btn');
+            if(btn) { 
+                btn.disabled = false; 
+                btn.classList.remove('disabled:opacity-20', 'disabled:cursor-not-allowed'); 
+            }
+            
+            if(currentQuestionIndex < questionsData.length - 1) {
+                setTimeout(nextQuestion, 350);
+            } else {
+                isTransitioning = false;
+            }
+        }
+
+        function nextQuestion() { 
+            if(currentQuestionIndex < questionsData.length - 1) { 
+                currentQuestionIndex++; 
+                render(); 
+            } else { 
+                currentStep = 'results'; 
+                render(); 
+            } 
+        }
+
+        function prevQuestion() { 
+            if(currentQuestionIndex > 0) { currentQuestionIndex--; render(); } 
+        }
+
+        function restartQuiz() { 
+            currentStep = 'intro'; currentQuestionIndex = 0; userAnswers.fill(null); render(); 
+        }
+
+        // --- MODALE MEDS (FR ONLY) ---
+        function openMedsModal() {
+            const rawModalHTML = `
+                <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm fade-in" id="medsModal" onclick="closeMedsModal()">
+                    <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
+                        <div class="p-6 bg-indigo-600 text-white flex justify-between items-center">
+                            <h3 class="text-xl font-bold">Traitements en France</h3>
+                            <button onclick="closeMedsModal()" class="hover:bg-indigo-500 rounded-full p-1"><span class="material-icons-round">close</span></button>
+                        </div>
+                        <div class="p-6 overflow-y-auto">
+                            <p class="text-sm text-slate-600 mb-4">En France, la seule molécule autorisée est le <strong>Méthylphénidate</strong> (stimulant), mais elle existe sous différentes formes de libération.</p>
+                            <div class="space-y-3">
+                                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="font-bold text-indigo-700">Ritaline LP</span>
+                                        <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">~8 heures</span>
+                                    </div>
+                                    <p class="text-xs text-slate-500">Libération modifiée (50% immédiat / 50% prolongé).</p>
+                                </div>
+                                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="font-bold text-indigo-700">Concerta LP</span>
+                                        <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">~12 heures</span>
+                                    </div>
+                                    <p class="text-xs text-slate-500">Action longue durée (Technologie OROS).</p>
+                                </div>
+                                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="font-bold text-indigo-700">Quasym / Medikinet</span>
+                                        <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">6 - 8 heures</span>
+                                    </div>
+                                    <p class="text-xs text-slate-500">Profils de libération spécifiques.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 border-t border-slate-100 bg-slate-50 text-center">
+                            <button onclick="closeMedsModal()" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition">Fermer</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', rawModalHTML);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMedsModal() {
+            const modal = document.getElementById('medsModal');
+            if(modal) {
+                modal.remove();
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Init
+        setLanguage('fr');
+    </script>
+</body>
+</html>
