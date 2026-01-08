@@ -1,4 +1,4 @@
-# TDAH Dépistage (ASRS v1.1)
+# Test de pré-diagnostic du TDAH (ASRS v1.1)
 
 Une page web simple et légère pour passer le test de dépistage du TDAH chez l'adulte (échelle officielle ASRS v1.1 de l'OMS).
 
@@ -6,9 +6,9 @@ Le projet est né d'un constat simple : la plupart des tests en ligne sont rempl
 
 ## Ce que ça fait
 
-* **Le Test Officiel :** Les 18 questions de l'OMS avec le calcul automatique du score.
-* **Contexte France 🇫🇷 :** Si la langue est réglée sur Français, le site affiche des infos spécifiques sur le parcours de soin (Généraliste -> Psychiatre) et les médicaments autorisés.
-* **Multilingue :** Disponible en Français, Anglais et Italien.
+* **Test officiel :** Les 18 questions de l'OMS avec le calcul automatique du score.
+* **Contexte centré sur la France 🇫🇷 :** Si la langue est réglée sur Français, le site affiche des infos spécifiques sur le parcours de soin (Généraliste -> Psychiatre) et les médicaments autorisés.
+* **Multilingue :** Disponible en français, anglais et italien.
 * **Privé :** 100% anonyme. Aucune donnée n'est envoyée à un serveur, tout le calcul se fait en local dans votre navigateur.
 * **Impression :** Possibilité de générer un PDF propre du résultat pour l'amener chez le médecin.
 
@@ -36,4 +36,4 @@ Ce site est un outil d'information et de pré-dépistage. **Ce n'est pas un diag
 ## Crédits
 
 * **Échelle :** ASRS v1.1 (Organisation Mondiale de la Santé).
-* **Infos France :** Inspiré par le travail de la communauté r/TDAHFrance et u/BersteinMilza.
+* **Reddit :** Inspiré par le travail de la communauté r/TDAHFrance et u/BersteinMilza.
