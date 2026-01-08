@@ -621,9 +621,8 @@
 
         function startQuiz() { currentStep = 'quiz'; render(); }
         
-        function selectAnswer(val) { 
-            if (isTransitioning) return;
-            isTransitioning = true;
+        function selectAnswer(val) {
+            
             userAnswers[currentQuestionIndex] = val;
             
             const buttons = document.querySelectorAll('button[onclick^="selectAnswer"]');
@@ -653,6 +652,7 @@
                 btn.disabled = false; 
                 btn.classList.remove('disabled:opacity-20', 'disabled:cursor-not-allowed'); 
             }
+        }
             
             if(currentQuestionIndex < questionsData.length - 1) {
                 setTimeout(nextQuestion, 350);
